@@ -1,0 +1,5 @@
+[
+  { "id": "n1", "title": "Root Idea", "description": "This is your starting thought", "x": 0, "y": 0, "z": 0, "radius": 1.5, "color": "#7dd3fc", "tags": ["root"] },
+  { "id": "n2", "title": "Design Notes", "description": "UI ideas and sketches", "x": 6, "y": 2, "z": -2, "radius": 1.1, "color": "#8b5cf6", "tags": ["ui","design"] },
+  { "id": "n3", "title": "DSA Concepts", "description": "Data structure summaries", "x": -5, "y": -1, "z": 3, "radius": 1.2, "color": "#f472b6", "tags": ["cs"] }
+]
