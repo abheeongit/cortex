@@ -8,11 +8,15 @@ const useNodeStore = create((set) => ({
 
   selectedNode: null,
 
-  // connect mode state
+  // Phase 2 states
   isConnectMode: false,
   startNodeForConnection: null,
 
-  // SELECT NODE
+  // Dragging state (Phase 4)
+  isDragging: false,
+  draggingNodeId: null,
+
+  // SELECT NODE (normal mode)
   selectNode: (id) =>
     set((state) => ({
       selectedNode: state.nodes.find((n) => n.id === id) || null,
@@ -22,7 +26,7 @@ const useNodeStore = create((set) => ({
   addNode: (node) =>
     set((state) => ({ nodes: [...state.nodes, node] })),
 
-  // UPDATE NODE
+  // UPDATE NODE (including position updates)
   updateNode: (id, updatedFields) =>
     set((state) => {
       const updatedNodes = state.nodes.map((node) =>
@@ -31,49 +35,45 @@ const useNodeStore = create((set) => ({
 
       return {
         nodes: updatedNodes,
-        selectedNode:
-          updatedNodes.find((n) => n.id === id) || null,
+        selectedNode: updatedNodes.find((n) => n.id === id) || state.selectedNode,
       };
     }),
 
-  // DELETE NODE + CLEAN EDGES
+  // DELETE NODE + REMOVE RELATED EDGES
   deleteNode: (id) =>
     set((state) => {
-      const filteredNodes = state.nodes.filter((n) => n.id !== id);
-      const filteredEdges = state.edges.filter(
-        (e) => e.from !== id && e.to !== id
-      );
-
       return {
-        nodes: filteredNodes,
-        edges: filteredEdges,
-        selectedNode: null,
+        nodes: state.nodes.filter((n) => n.id !== id),
+        edges: state.edges.filter((e) => e.from !== id && e.to !== id),
+        selectedNode: state.selectedNode && state.selectedNode.id === id ? null : state.selectedNode,
       };
     }),
 
-  // 🔥 CONNECT MODE ENABLE / DISABLE
+  // PHASE 2 — CONNECT MODE
   toggleConnectMode: () =>
     set((s) => ({
       isConnectMode: !s.isConnectMode,
       startNodeForConnection: null,
+      selectedNode: null,
     })),
 
-  // 🔥 STEP 1: SELECT FIRST NODE
+  // STEP 1: Select first node
   startConnection: (id) =>
     set(() => ({
       startNodeForConnection: id,
     })),
 
-  // 🔥 STEP 2: SELECT SECOND NODE → CREATE EDGE
+  // STEP 2: Select second node
   finishConnection: (secondId) =>
     set((state) => {
       const firstId = state.startNodeForConnection;
 
-      // do nothing if same node clicked
       if (!firstId || firstId === secondId)
-        return { isConnectMode: false, startNodeForConnection: null };
+        return {
+          isConnectMode: false,
+          startNodeForConnection: null,
+        };
 
-      // add edge
       const newEdge = { from: firstId, to: secondId };
 
       return {
@@ -82,6 +82,19 @@ const useNodeStore = create((set) => ({
         startNodeForConnection: null,
       };
     }),
+
+  // DRAGGING CONTROLS
+  setDragging: (isDragging) =>
+    set(() => ({
+      isDragging,
+      draggingNodeId: isDragging ? null : null, // keep but we'll set draggingNodeId separately
+    })),
+
+  setDraggingNode: (id) =>
+    set(() => ({
+      draggingNodeId: id,
+      isDragging: !!id,
+    })),
 }));
 
 export default useNodeStore;

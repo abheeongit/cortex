@@ -1,98 +1,79 @@
 import React, { useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { MeshDistortMaterial } from "@react-three/drei";
 import { animated, useSpring } from "@react-spring/three";
-import * as THREE from "three";
-
 import useNodeStore from "../../store/useNodeStore";
-import useThemeStore from "../../store/useThemeStore";
 
-const BLOOM_LAYER = 1;
-
-export default function NodeSphere({ node, bloomOnly = false }) {
-  const groupRef = useRef();
-
-  const theme = useThemeStore((s) => s.currentTheme);
-
+export default function NodeSphere({ node }) {
+  const ref = useRef();
   const selectNode = useNodeStore((s) => s.selectNode);
+  const selectedNode = useNodeStore((s) => s.selectedNode);
+  const isSelected = selectedNode?.id === node.id;
 
-  const isConnectMode = useNodeStore((s) => s.isConnectMode);
-  const startNode = useNodeStore((s) => s.startNodeForConnection);
-  const startConnection = useNodeStore((s) => s.startConnection);
-  const finishConnection = useNodeStore((s) => s.finishConnection);
-
-  const selected = useNodeStore((s) => s.selectedNode);
-  const isSelected = selected?.id === node.id;
-
-  const isConnectingStart = isConnectMode && startNode === node.id;
-
-  // glow color logic (soft)
-  const glowColor = isConnectingStart
-    ? "#aa55ff"
-    : isSelected
-    ? theme.glowColor
-    : node.color || theme.accent;
-
-  // Inner pulse glow intensity
-  const { pulse } = useSpring({
-    pulse: isSelected ? 1.6 : 1,
-    config: { tension: 90, friction: 10 },
+  const { scale, emissiveIntensity } = useSpring({
+    scale: isSelected ? 1.8 : 1.0,
+    emissiveIntensity: isSelected ? 2.8 : 0.5,
+    config: { mass: 1, tension: 200, friction: 20 }
   });
 
-  // Outer scale animation
-  const { scale } = useSpring({
-    scale: isSelected ? 1.3 : 1,
-    config: { tension: 160, friction: 15 },
+  const plasmaColor = "#4fdfff";     // Cyan Plasma
+  const glowColor = "#92faff";       // Outer Glow
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    ref.current.rotation.y = t * 0.35;
+    ref.current.rotation.x = Math.sin(t * 0.3) * 0.2;
   });
 
   return (
     <animated.group
-      ref={groupRef}
+      ref={ref}
       scale={scale}
       position={[node.x, node.y, node.z]}
       onClick={(e) => {
         e.stopPropagation();
-
-        if (isConnectMode) {
-          if (!startNode) startConnection(node.id);
-          else finishConnection(node.id);
-          return;
-        }
-
         selectNode(node.id);
       }}
+      onPointerOver={() => (document.body.style.cursor = "pointer")}
+      onPointerOut={() => (document.body.style.cursor = "default")}
     >
-      {/* OUTER HOLOGRAM SHELL */}
-      {!bloomOnly && (
-        <mesh>
-          <sphereGeometry args={[node.radius || 1.1, 48, 48]} />
-          <meshStandardMaterial
-            color={glowColor}
-            transparent
-            opacity={0.17}
-            roughness={0.3}
-            metalness={0.05}
-            emissive={glowColor}
-            emissiveIntensity={0.35}
-          />
-        </mesh>
-      )}
 
-      {/* INNER GLOW CORE (Bloom Layer) */}
-      <animated.mesh
-        onUpdate={(self) => {
-          if (bloomOnly) {
-            self.layers.set(BLOOM_LAYER);
-          }
-        }}
-      >
-        <sphereGeometry args={[0.55, 32, 32]} />
-        <animated.meshStandardMaterial
+      {/* Animated hologram outer shell */}
+      <mesh>
+        <sphereGeometry args={[1.3, 64, 64]} />
+        <MeshDistortMaterial
           color={glowColor}
-          emissive={glowColor}
-          emissiveIntensity={pulse.to((v) => (isSelected ? v * 1.3 : v * 0.6))}
-          roughness={0.2}
-          metalness={0.1}
+          transparent
+          opacity={0.25}
+          distort={0.4}
+          speed={3}
+        />
+      </mesh>
+
+      {/* Inner plasma core */}
+      <animated.mesh>
+        <sphereGeometry args={[0.9, 48, 48]} />
+        <animated.meshStandardMaterial
+          color={plasmaColor}
+          emissive={plasmaColor}
+          emissiveIntensity={emissiveIntensity}
+          metalness={0.25}
+          roughness={0.1}
         />
       </animated.mesh>
+
+      {/* Shockwave halo when selected */}
+      {isSelected && (
+        <animated.mesh scale={scale.to((v) => v * 1.3)}>
+          <sphereGeometry args={[1.55, 48, 48]} />
+          <meshBasicMaterial
+            color={glowColor}
+            transparent
+            opacity={0.18}
+            depthWrite={false}
+          />
+        </animated.mesh>
+      )}
     </animated.group>
   );
 }
