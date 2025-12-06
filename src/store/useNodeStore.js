@@ -1,99 +1,94 @@
 import { create } from "zustand";
-import sampleNodes from "../data/sampleNodes.json";
-import sampleEdges from "../data/sampleEdges.json";
 
 const useNodeStore = create((set) => ({
-  nodes: sampleNodes,
-  edges: sampleEdges,
+  // INITIAL NODES
+  nodes: [
+    {
+      id: "node-1",
+      x: 0,
+      y: 0,
+      z: 0,
+      color: "#4fdfff", // BLUE
+      radius: 1.2,
+    },
+    {
+      id: "node-2",
+      x: 3,
+      y: 1,
+      z: -1,
+      color: "#ff6ad5", // PINK/PURPLE
+      radius: 1.2,
+    },
+    {
+      id: "node-3",
+      x: -3,
+      y: -1,
+      z: 1,
+      color: "#a6ff4d", // GREEN
+      radius: 1.2,
+    },
+  ],
+
+  edges: [],
 
   selectedNode: null,
-
-  // Phase 2 states
-  isConnectMode: false,
-  startNodeForConnection: null,
-
-  // Dragging state (Phase 4)
   isDragging: false,
-  draggingNodeId: null,
 
-  // SELECT NODE (normal mode)
-  selectNode: (id) =>
-    set((state) => ({
-      selectedNode: state.nodes.find((n) => n.id === id) || null,
-    })),
+  // CONNECT MODE STATE
+  isConnectMode: false,
+  firstNode: null,
 
-  // CREATE NODE
-  addNode: (node) =>
-    set((state) => ({ nodes: [...state.nodes, node] })),
-
-  // UPDATE NODE (including position updates)
-  updateNode: (id, updatedFields) =>
-    set((state) => {
-      const updatedNodes = state.nodes.map((node) =>
-        node.id === id ? { ...node, ...updatedFields } : node
-      );
-
-      return {
-        nodes: updatedNodes,
-        selectedNode: updatedNodes.find((n) => n.id === id) || state.selectedNode,
-      };
-    }),
-
-  // DELETE NODE + REMOVE RELATED EDGES
-  deleteNode: (id) =>
-    set((state) => {
-      return {
-        nodes: state.nodes.filter((n) => n.id !== id),
-        edges: state.edges.filter((e) => e.from !== id && e.to !== id),
-        selectedNode: state.selectedNode && state.selectedNode.id === id ? null : state.selectedNode,
-      };
-    }),
-
-  // PHASE 2 — CONNECT MODE
   toggleConnectMode: () =>
-    set((s) => ({
-      isConnectMode: !s.isConnectMode,
-      startNodeForConnection: null,
+    set((state) => ({
+      isConnectMode: !state.isConnectMode,
+      firstNode: null, // reset whenever toggled
       selectedNode: null,
     })),
 
-  // STEP 1: Select first node
-  startConnection: (id) =>
-    set(() => ({
-      startNodeForConnection: id,
-    })),
+  // Select a node
+  selectNode: (id) => set({ selectedNode: id }),
 
-  // STEP 2: Select second node
-  finishConnection: (secondId) =>
+  // Called when a node is clicked WHILE in connect mode
+  handleConnectClick: (nodeId) =>
     set((state) => {
-      const firstId = state.startNodeForConnection;
+      // If firstNode is not chosen yet → choose it
+      if (!state.firstNode) {
+        return { firstNode: nodeId };
+      }
 
-      if (!firstId || firstId === secondId)
-        return {
-          isConnectMode: false,
-          startNodeForConnection: null,
+      // If second node chosen → create an edge
+      if (state.firstNode !== nodeId) {
+        const newEdge = {
+          from: state.firstNode,
+          to: nodeId,
         };
 
-      const newEdge = { from: firstId, to: secondId };
+        return {
+          edges: [...state.edges, newEdge],
+          firstNode: null,
+          isConnectMode: false,
+          selectedNode: null,
+        };
+      }
 
-      return {
-        edges: [...state.edges, newEdge],
-        isConnectMode: false,
-        startNodeForConnection: null,
-      };
+      return {};
     }),
 
-  // DRAGGING CONTROLS
-  setDragging: (isDragging) =>
-    set(() => ({
-      isDragging,
-      draggingNodeId: isDragging ? null : null, // keep but we'll set draggingNodeId separately
+  // Drag state
+  setDragging: (v) => set({ isDragging: v }),
+
+  // Add a new node
+  addNode: (node) =>
+    set((state) => ({
+      nodes: [...state.nodes, node],
     })),
 
-  setDraggingNode: (id) =>
-    set(() => ({
-      draggingNodeId: id,
-      isDragging: !!id,
+  // Update a node's position
+  updateNodePosition: (id, x, y, z) =>
+    set((state) => ({
+      nodes: state.nodes.map((n) =>
+        n.id === id ? { ...n, x, y, z } : n
+      ),
     })),
 }));
 

@@ -15,7 +15,7 @@ export default function EdgeLine({ from, to }) {
   const points = useMemo(() => {
     const mid = [
       (n1.x + n2.x) / 2,
-      (n1.y + n2.y) / 2 + 0.6,
+      (n1.y + n2.y) / 2 + 0.6, // slight arc upwards
       (n1.z + n2.z) / 2,
     ];
     return [
@@ -30,8 +30,8 @@ export default function EdgeLine({ from, to }) {
       points={points}
       color={theme.accent}
       lineWidth={1.2}
-      opacity={0.23}
       transparent
+      opacity={0.23}
     />
   );
 }
